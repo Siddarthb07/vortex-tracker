@@ -8,15 +8,15 @@ from datetime import datetime
 PIXELS_PER_CM = 566 / 2.5  # ≈ 226.4 pixels/cm
 
 # Path to the folders
-folder_path = r"C:\Users\siddu\OneDrive\Desktop\project_folder_40psi\vortex_images"
-project_folder = r"C:\Users\siddu\OneDrive\Desktop\project_folder_40psi"
+folder_path = r"" #folder path of images
+project_folder = r"" #folder path to save geenrated images
 log_file_path = os.path.join(project_folder, "vortex_diameters_log.txt")
 diameter_file_path = os.path.join(project_folder, "Diameter_of_vortex.txt")
 
 def measure_diameter(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     blur = cv2.GaussianBlur(gray, (5, 5), 0)
-    _, thresh = cv2.threshold(blur,68,255, cv2.THRESH_BINARY_INV)
+    _, thresh = cv2.threshold(blur,68,255, cv2.THRESH_BINARY_INV) #treshold values
 
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if not contours:
@@ -80,3 +80,4 @@ plt.ylim(0, 8)
 plt.tight_layout()
 plt.savefig(os.path.join(project_folder, "vortex_Diameter_changes.png"))
 plt.show()
+
