@@ -1,0 +1,82 @@
+import cv2
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+from datetime import datetime
+
+# Constants
+PIXELS_PER_CM = 566 / 2.5  # ≈ 226.4 pixels/cm
+
+# Path to the folders
+folder_path = r"C:\Users\siddu\OneDrive\Desktop\project_folder_40psi\vortex_images"
+project_folder = r"C:\Users\siddu\OneDrive\Desktop\project_folder_40psi"
+log_file_path = os.path.join(project_folder, "vortex_diameters_log.txt")
+diameter_file_path = os.path.join(project_folder, "Diameter_of_vortex.txt")
+
+def measure_diameter(image):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    blur = cv2.GaussianBlur(gray, (5, 5), 0)
+    _, thresh = cv2.threshold(blur,68,255, cv2.THRESH_BINARY_INV)
+
+    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
+        return None
+
+    # Find the largest contour
+    contour = max(contours, key=cv2.contourArea)
+
+    # Get topmost and bottommost points
+    topmost = tuple(contour[contour[:, :, 1].argmin()][0])
+    bottommost = tuple(contour[contour[:, :, 1].argmax()][0])
+    
+    pixel_diameter = abs(bottommost[1] - topmost[1])
+    real_diameter_cm = pixel_diameter / PIXELS_PER_CM
+    return real_diameter_cm
+
+def process_folder(folder_path):
+    diameters = []
+    filenames = sorted(os.listdir(folder_path))
+
+    # Open log file in append mode
+    with open(log_file_path, "a") as log_file:
+        log_file.write(f"\nRun on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}:\n")
+
+        # Log data from diameter_file_path if it exists
+        if os.path.exists(diameter_file_path):
+            with open(diameter_file_path, "r") as data_file:
+                log_file.write(data_file.read())
+        else:
+            log_file.write("Diameter_of_vortex.txt not found.\n")
+
+        for filename in filenames:
+            if filename.lower().endswith((".png", ".jpg", ".jpeg")):
+                path = os.path.join(folder_path, filename)
+                image = cv2.imread(path)
+                diameter = measure_diameter(image)
+                if diameter is not None:
+                    print(f"{filename}: Diameter = {diameter:.2f} cm")
+                    log_file.write(f"{filename}: {diameter:.2f} cm\n")
+                    diameters.append(diameter)
+                else:
+                    print(f"{filename}: Diameter could not be measured.")
+                    log_file.write(f"{filename}: Measurement failed\n")
+                    diameters.append(0)  # or np.nan if preferred
+
+    return diameters
+
+# Run the processing
+diameters = process_folder(folder_path)
+
+# Convert frame indices to time in seconds (assuming 500 fps)
+time_in_seconds = [i / 500 for i in range(len(diameters))]
+
+# Plot the results
+plt.plot(time_in_seconds, diameters, color="#74c365", linestyle='-')
+plt.xlabel("Time (s)")
+plt.ylabel("Vortex Diameter (cm)")
+plt.title("Vortex Ring Diameter Over Time")
+plt.grid(True)
+plt.ylim(0, 8)
+plt.tight_layout()
+plt.savefig(os.path.join(project_folder, "vortex_Diameter_changes.png"))
+plt.show()
